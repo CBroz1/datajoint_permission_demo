@@ -80,6 +80,27 @@ if ACTION == "insert":
     sum_key = Sum.fetch("KEY", as_dict=True)[0]
     Four.insert1({"f": 6, **sum_key}, skip_duplicates=True)
 
-if ACTION == "delete":
     # basic user cannot delete their own data
     (One & {"a": 1}).delete(safemode=False)
+
+import os
+
+os.environ["SPYGLASS_BASE_DIR"] = "/home/cb/wrk/data/"
+os.environ["DJ_SUPPORT_FILEPATH_MANAGEMENT"] = "TRUE"
+
+if ACTION == "declare_spy":
+    from spyglass import *  # noqa: F403
+
+if ACTION == "insert_spy":
+    from spyglass import common as sgc
+    from spyglass import data_import as sdi
+
+    nwb_file_names = [f"minirec2023062{i}.nwb" for i in range(6)]
+    sdi.insert_sessions(nwb_file_names[2])
+
+    print(f"USER: {USER}")
+
+if ACTION == "delete_spy":
+    from spyglass import common as sgc
+
+    sgc.Nwbfile.delete()

@@ -6,6 +6,7 @@ run_mysql() {
       docker run --name ptest"$1" -p 330"$1":3306 \
           -e MYSQL_ROOT_PASSWORD=tutorial \
           -e MYSQL_DEFAULT_STORAGE_ENGINE=InnoDB \
+          -v "$(pwd)"/mysqld.cnf:/etc/mysql/conf.d/mysqld.cnf \
           -d datajoint/mysql:"$2" > /dev/null &
     fi
 }
@@ -27,34 +28,34 @@ remove_container() { # Remove a container
 }
 
 # ----------------- Containers -----------------
-remove_container 5
+# remove_container 5
 remove_container 8
-run_mysql 5 5.7
+# run_mysql 5 5.7
 run_mysql 8 8.0
 
 # --------------- Install DataJoint ---------------
-if ! pip show datajoint | grep -e "Version: 0.14.1" > /dev/null; then
-    echo "Installing DataJoint..."; python -m pip install \
-      git+https://github.com/datajoint/datajoint-python.git \
-      > /dev/null
-fi
+# if ! pip show datajoint | grep -e "Version: 0.14.1" > /dev/null; then
+#     echo "Installing DataJoint..."; python -m pip install \
+#       git+https://github.com/datajoint/datajoint-python.git \
+#       > /dev/null
+# fi
 
-# ----------------- Run Tests on 5 -----------------
-wait_for_mysql 5
-add_user 5
-echo "5: Declare schema"
-python pipeline.py root 5 declare
-echo "5: Insert data"
-python pipeline.py basic 5 insert
-echo "5: Delete"
-python pipeline.py basic 5 delete
-
+# # ----------------- Run Tests on 5 -----------------
+# wait_for_mysql 5
+# add_user 5
+# echo "5: Declare schema"
+# python pipeline.py root 5 declare
+# echo "5: Insert data"
+# python pipeline.py basic 5 insert
+# echo "5: Delete"
+# python pipeline.py basic 5 delete
+#
 # ----------------- Run Tests on 8 -----------------
 wait_for_mysql 8
 add_user 8
 echo "8: Declare schema"
-python pipeline.py root 8 declare
+python pipeline.py root 8 declare_spy
 echo "8: Insert data"
-python pipeline.py basic 8 insert
+python pipeline.py basic 8 insert_spy
 echo "8: Delete"
-python pipeline.py basic 8 delete
+python pipeline.py basic 8 delete_spy

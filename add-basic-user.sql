@@ -9,4 +9,9 @@ GRANT SELECT ON `%`.* TO 'basic'@'%';
 
 -- Grant ALL on test database
 GRANT ALL PRIVILEGES ON `test\_%`.* TO `basic`@`%`;
+GRANT ALL PRIVILEGES ON `common\_%`.* TO `basic`@`%`;
+GRANT ALL PRIVILEGES ON `spikesorting\_%`.* TO `basic`@`%`;
+GRANT ALL PRIVILEGES ON `lfp\_%`.* TO `basic`@`%`;
+GRANT ALL PRIVILEGES ON `position\_%`.* TO `basic`@`%`;
+GRANT ALL PRIVILEGES ON `ripple\_%`.* TO `basic`@`%`;
 
