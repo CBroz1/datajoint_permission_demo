@@ -1,12 +1,24 @@
-# DataJoint Permission Error Demo
+# MySQL Permission Error Demo
 
-This repo aimed to replicate an error that users with
-limited privelages experiece when using DataJoint 0.14.1 to perform cascading
-deletes, as discussed in
-[this datajoint issue](https://github.com/datajoint/datajoint-python/issues/1110)
-and [this mysql forum post](https://bugs.mysql.com/bug.php?id=99336).
-We were not able to replicate the error, leading to the conclusion that there
-is an issue with our MySQL setup, having upgraded from 5.7 to 8.0.
+This repo aims to replicate an error that users with
+limited privelages experience when deleting entries from tables despite having
+`ALL PRIVILEGES` on the database.
 
-To run the demo, execute `_startup.sh`. After running this script, get a more
-interactive debug mode with `ipython -i pipeline.py basic 8 delete`.
+run `main.sh` to see the error in action:
+
+```text
+> ./main.sh
+Creating users and tables...
+users: user1, user2
+
+Normal: user1 delete shows blocked by fk ref...
+ERROR 1451 (23000) at line 1: Cannot delete or update a parent row
+
+Unexpected: user2 shows permission error...
+ERROR 1142 (42000) at line 1: DELETE command denied to user 'user2'@'localhost' for table 'one'
+Despite having ALL PRIVILEGES on this prefix...
+GRANT ALL PRIVILEGES ON `common%`.`%` TO `user2`@`%`
+
+Adding table-specific grant results in expected error...
+ERROR 1451 (23000) at line 1: Cannot delete or update a parent row
+``
