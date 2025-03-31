@@ -22,3 +22,13 @@ GRANT ALL PRIVILEGES ON `common%`.`%` TO `user2`@`%`
 Adding table-specific grant results in expected error...
 ERROR 1451 (23000) at line 1: Cannot delete or update a parent row
 ```
+
+This error is caused by the discrepancy in grants across basic users:
+
+```sql
+GRANT ALL PRIVILEGES ON `common%`.* TO 'user1'@'%';
+GRANT ALL PRIVILEGES ON `common`.`%` TO 'user2'@'%';
+```
+
+While the former matches all tables with this prefix wildcard, the latter calls
+some form of search on table names, and may only apply to pre-existing tables.
