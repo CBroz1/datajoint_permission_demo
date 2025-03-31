@@ -1,6 +1,3 @@
-CREATE USER IF NOT EXISTS 'admin'@'%' IDENTIFIED BY 'tutorial';
-GRANT ALL PRIVILEGES ON `%`.* TO `admin`@`%`;
-
 -- Drop the user if it exists
 DROP USER IF EXISTS 'user1';
 DROP USER IF EXISTS 'user2';

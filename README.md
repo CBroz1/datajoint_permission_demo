@@ -21,4 +21,4 @@ GRANT ALL PRIVILEGES ON `common%`.`%` TO `user2`@`%`
 
 Adding table-specific grant results in expected error...
 ERROR 1451 (23000) at line 1: Cannot delete or update a parent row
-``
+```
