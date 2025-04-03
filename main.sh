@@ -1,5 +1,23 @@
 #!/bin/bash
 
+source mysql.env
+
+images=$(docker images --format="{{.Repository}}:{{.Tag}}")
+if [[ ! "$images" =~ "mysql8:u20" ]]; then
+  ./container/1_load-image.sh
+  ./container/2_build-mysql8.sh
+fi
+
+containers=$(docker ps -a --format '{{.Names}}')
+if ! echo "$containers" | grep -q "$CNAME"; then
+  ./container/3_init-mysql8.sh
+fi
+
+running=$(docker inspect --format="{{ .State.Running }}" ${CNAME} 2>/dev/null)
+if [ ! $running == "true" ]; then
+  ./container/4_start-mysql8.sh
+fi
+
 # ----------------- Start -----------------
 if [[ "$1" == 'restart' ]]; then
   docker stop test > /dev/null

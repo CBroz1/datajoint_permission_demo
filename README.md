@@ -1,34 +1,61 @@
 # MySQL Permission Error Demo
 
-This repo aims to replicate an error that users with
-limited privelages experience when deleting entries from tables despite having
-`ALL PRIVILEGES` on the database.
+## Database Configuration
 
-run `main.sh` to see the error in action:
+Scripts provided by Dirk Kleinhesselink to demonstrate the Frank Lab's MySQL
+configuration.  The scripts are designed to be run on a Linux system with
+Docker installed.
 
-```text
-> ./main.sh
-Creating users and tables...
-users: user1, user2
+1. Local settings files
+    - `mysql.env` - Copy `example.mysql.env` to `mysql.env` and fill in values
+    - `my.cnf` - Copy `example.my.cnf` to `my.cnf` and modify
+        the values to remove the need for credentials in the command line.
+        For a production system, leave this file blank.
+2. Custom image: download and build
+    - `container/1_load-image.sh` - Download and load the mysql-8.0.34 image
+        into the local docker repository.
+    - `container/2_build-mysql8.sh`[^1] - Build the custom MySQL container image
+        from the Dockerfile.base and the mysql-8.0.34 image.
+3. `container/3_init-mysql8.sh` - Initialize the MySQL container
+    - Loads `mysql.env`
+    - Makes folders for various paths (see `mysql.env`)
+    - Starts the MySQL container
+    - Maps scripts/configs into the container (see `container/bin` and
+        `container/conf`)
+    - Generates security certificates via openssl
+4. `container/4_start-mysql8.sh` - Start the MySQL container
+5. `container/5_shell.sh` - Open a shell in the MySQL container
+6. `container/6_stop-mysql8.sh` - Stop the MySQL container
+7. `container/7_relaunch-mysql8.sh` - Relaunch the MySQL container.  This is
+    used to reinitialize the container after it has been stopped.
+8. `container/8_destroy-mysql8.sh` - Destroy the MySQL container. Removes the
+    container and the data volume.
 
-Normal: user1 delete shows blocked by fk ref...
-ERROR 1451 (23000) at line 1: Cannot delete or update a parent row
+[^1] Only use the build script if you do not have the container image already
+or if you want to make a newer/updated image.  Note that the Dockerfile.base
+has hard-coded references to now out-dated community mysql 8 repositories. To
+build a newer container, you will need to know what repository file is available
+and update the Dockerfile.base file first.  docker build is being deprecated.
 
-Unexpected: user2 shows permission error...
-ERROR 1142 (42000) at line 1: DELETE command denied to user 'user2'@'localhost' for table 'one'
-Despite having ALL PRIVILEGES on this prefix...
-GRANT ALL PRIVILEGES ON `common%`.`%` TO `user2`@`%`
+The /var/lib/mysql folder will be mapped back to a folder outside the container
+as will the mysql-backup folder.
 
-Adding table-specific grant results in expected error...
-ERROR 1451 (23000) at line 1: Cannot delete or update a parent row
-```
+## 3/26/25 Steps
 
-This error is caused by the discrepancy in grants across basic users:
+- select single Nwbfile entries in all common tables listed in issue
+- run export of these entries
+- modify export varchars
+  - initially run modified
+  - issues importing from common with mismatching table definitions
+- ensure log tables exist (from spy.X import schema; schema.log)
+  - initially ran w/o and cascading delete attempted to declare it
+  - declaring a table within a transaction raises an error
+- as admin, import decoding tables not previously declared
+  - basic user did not have permission to declare w/in dj_helper_fn:77
+- as basic1, insert minirec file with insert_sessions
+- as basic2, attempt to delete ...
+  - session from export: No issue
+  - minirec session above: REPLICATED
 
-```sql
-GRANT ALL PRIVILEGES ON `common%`.* TO 'user1'@'%';
-GRANT ALL PRIVILEGES ON `common`.`%` TO 'user2'@'%';
-```
-
-While the former matches all tables with this prefix wildcard, the latter calls
-some form of search on table names, and may only apply to pre-existing tables.
+- declare tables with spyglass as admin
+- insert minirec file with insert_sessions as basic1
