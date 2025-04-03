@@ -14,10 +14,10 @@ GRANT ALL PRIVILEGES ON `common%`.* TO 'user1'@'%';
 -- Create another user, with the same privileges
 CREATE USER IF NOT EXISTS 'user2'@'%' IDENTIFIED BY 'tutorial';
 GRANT USAGE, SELECT ON `%`.* TO 'user2'@'%';
-GRANT ALL PRIVILEGES ON `common`.* TO 'user2'@'%';
+GRANT ALL PRIVILEGES ON `common%`.* TO 'user2'@'%';
 
 SELECT CONCAT('users: ', GROUP_CONCAT(user SEPARATOR ', ')) as msg
   FROM mysql.user
-  WHERE USER LIKE 'user%';
+  WHERE USER LIKE 'user%' OR USER = 'admin';
 
 FLUSH PRIVILEGES;
