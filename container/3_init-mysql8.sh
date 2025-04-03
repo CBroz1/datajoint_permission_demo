@@ -68,7 +68,7 @@ docker run \
 	-p ${RPORT}:3306 \
 	-v ${DB_DATA}:/var/lib/mysql \
   -v ${ROOT_DIR}/.my.cnf:/root/.my.cnf \
-	-v ${CONTAINER_DIR}/conf:/etc/mysql/mysql.conf.d \ # late add - check works
+	# -v ${CONTAINER_DIR}/conf:/etc/mysql/mysql.conf.d \ # late add - check works
 	-v ${KEYS_PATH}:/mysql-keys \
 	-v ${DB_BACKUP}:/mysql-backups \
 	-v ${DB_LOGS}:/var/log/mysql \
