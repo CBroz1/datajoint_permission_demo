@@ -12,12 +12,12 @@ warnings.filterwarnings("ignore", category=UserWarning, module="hdmf")
 os.environ["SPYGLASS_BASE_DIR"] = "/home/cb/wrk/spyglass/tests/_data"
 os.environ["DJ_SUPPORT_FILEPATH_MANAGEMENT"] = "TRUE"
 
-ipython = get_ipython()
-if ipython:
-    orig_stdout = sys.stdout
-    sys.stdout = open(os.devnull, "w")
-    ipython.run_line_magic("xmode", "Minimal")
-    sys.stdout = orig_stdout
+# ipython = get_ipython()
+# if ipython:
+#     orig_stdout = sys.stdout
+#     sys.stdout = open(os.devnull, "w")
+#     ipython.run_line_magic("xmode", "Minimal")
+#     sys.stdout = orig_stdout
 
 
 PORT = 6
@@ -55,7 +55,7 @@ dj.config.update(
 )
 dj.conn()
 
-if not dj.conn().is_connected():
+if not dj.conn().is_connected:
     raise RuntimeError("Failed to connect to the database.")
     sys.exit(1)
 
@@ -110,8 +110,18 @@ if ACTION == "insert":
             **kwargs,
         )
 
+    if len(sgc.Session.Experimenter()) == 0:
+        print(f"FAIL   : {USER}, {ACTION}")
+    else:
+        print(f"PASS   : {USER}, {ACTION}")
+
 
 if ACTION == "delete":
     from spyglass import common as sgc
 
     sgc.Nwbfile.delete()
+
+    if len(sgc.Nwbfile()) > 0:
+        print(f"FAIL   : {USER}, {ACTION}")
+    else:
+        print(f"PASS   : {USER}, {ACTION}")

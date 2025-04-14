@@ -58,6 +58,7 @@ if [[ $MADE_DIRS_MSG != "" ]]; then
   echo -e "Created Directories: $MADE_DIRS_MSG"
 fi
 
+
 docker run \
 	-di \
 	--name $CNAME \
@@ -67,14 +68,13 @@ docker run \
 	--mac-address="$MACADDR" \
 	-p ${RPORT}:3306 \
 	-v ${DB_DATA}:/var/lib/mysql \
-  -v ${ROOT_DIR}/.my.cnf:/root/.my.cnf \
-	# -v ${CONTAINER_DIR}/conf:/etc/mysql/mysql.conf.d \ # late add - check works
+    -v ${CONTAINER_DIR}/conf:/etc/mysql/mysql.conf.d \
 	-v ${KEYS_PATH}:/mysql-keys \
 	-v ${DB_BACKUP}:/mysql-backups \
 	-v ${DB_LOGS}:/var/log/mysql \
 	-v ${CONTAINER_DIR}/bin:/opt/bin \
 	-t $IMAGE:$TAG /sbin/init > /dev/null
-#
+# -v ${ROOT_DIR}/.my.cnf:/root/.my.cnf \ # for running sql w/o password
 sleep 2
 
 if [[ ! -f $KEYS_PATH/ca-key.pem ]]; then

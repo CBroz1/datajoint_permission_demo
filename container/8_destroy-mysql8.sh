@@ -1,3 +1,5 @@
+#!/bin/bash
+
 PRIOR_DIR=`pwd`
 
 if [[ -f 'mysql.env' ]]; then

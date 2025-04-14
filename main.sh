@@ -5,8 +5,6 @@ PRIOR_DIR=$(pwd)
 source mysql.env
 cd ${ROOT_PATH}
 
-ls ./container/
-
 # ----------------- Start -----------------
 if [[ "$1" == 'restart' ]]; then
   ./container/8_destroy-mysql8.sh
