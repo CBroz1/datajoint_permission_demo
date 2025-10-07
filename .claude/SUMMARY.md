@@ -1,15 +1,26 @@
 # MySQL FK Error Verbosity Issue - Summary
 
-**Status:** ✅ Issue Successfully Reproduced
+**Status:** ✅ Issues Successfully Reproduced and Isolated
 **Date:** 2025-10-07
 **MySQL Version:** 8.0.34 on Ubuntu 20.04 (custom image mysql8:u20)
-**Container:** mysql-test-perms
+
+**KEY DOCUMENT:** See `ISSUES_SUMMARY.md` for detailed analysis of both issues
 
 ---
 
-## Problem Statement
+## Two Independent Issues Discovered
+
+### Issue A: Insufficient Privileges → Non-Verbose FK Errors
 
 Users lacking ALL privileges on FK-referencing tables receive non-verbose ERROR 1217 instead of verbose ERROR 1451 with FK constraint details.
+
+### Issue B: Role Grants Break Privilege Evaluation (MySQL BUG)
+
+Users assigned roles cannot use database-level privileges for DML operations (INSERT/UPDATE/DELETE), even with direct grants. ERROR 1142 (permission denied).
+
+---
+
+## Problem Statement (Issue A)
 
 ### Error Comparison
 
@@ -29,7 +40,12 @@ ERROR 1217 (23000): Cannot delete or update a parent row: a foreign key constrai
 
 ## Root Cause ✅
 
-MySQL requires ALL privileges on **every** FK-referencing table to provide verbose error messages. Even if the user has ALL privileges on the table causing the immediate FK block, lacking ALL on **any other** FK-referencing table results in ERROR 1217.
+MySQL determines error verbosity based on the total count of FK-referencing tables where the user has ALL privileges:
+
+- **Single FK-referencing table** with ALL privileges → ERROR 1451 (verbose) ✅
+- **Multiple FK-referencing tables** where user lacks ALL on any → ERROR 1217 (non-verbose) ❌
+
+Even if the user has ALL privileges on the specific table causing the FK block, lacking ALL on **any other** FK-referencing table results in non-verbose ERROR 1217.
 
 ---
 
@@ -103,12 +119,26 @@ docker exec -i mysql-test-perms mysql -uuser1 -ptutorial < sql/4_delete_parent2.
 
 ## Impact
 
+### Issue A: Non-Verbose FK Errors
 **Affects:** DataJoint/Spyglass users with partial schema access
 **Severity:** High - makes debugging FK constraint failures extremely difficult
 
 **Workaround:** Grant ALL privileges on all schemas with FK constraints referencing tables the user needs to modify.
 
 **Alternative:** Provide tooling to query `information_schema.KEY_COLUMN_USAGE` to find blocking FKs when ERROR 1217 occurs.
+
+### Issue B: Role Grant Bug
+**Affects:** ALL users assigned roles in MySQL 8.0.34
+**Severity:** Critical - completely breaks role-based access control (RBAC)
+
+**ONLY SOLUTION:** Avoid MySQL roles entirely, use direct grants only.
+```sql
+-- DO NOT USE
+CREATE ROLE 'dj_user';  ❌
+
+-- USE DIRECT GRANTS
+GRANT ALL PRIVILEGES ON `one\_%`.* TO 'user1'@'%';  ✅
+```
 
 ---
 
