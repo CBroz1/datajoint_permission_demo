@@ -1,10 +1,14 @@
 -- ============================================================================
--- Schema Creation for FK Error Verbosity Testing
+-- Schema Creation WITHOUT three_a (Simplified Test)
 -- ============================================================================
--- Creates 3 schemas with parent/child FK relationships:
+-- CONTROL TEST: This variant creates only two schemas (one_a, two_a).
+-- This tests whether the issue occurs even without a third FK-referencing table.
+--
+-- Compare results with 2_declare.sql (which includes three_a).
+--
+-- Creates 2 schemas with parent/child FK relationships:
 -- - one_a.parent (PK: id)
 -- - two_a.child (FK → one_a.parent)
--- - three_a.child (FK → one_a.parent)
 -- ============================================================================
 
 -- ============================================================================
@@ -21,7 +25,7 @@ CREATE TABLE `parent` (
 ) ENGINE=InnoDB;
 
 -- ============================================================================
--- Schema two_a: Child table 1
+-- Schema two_a: Child table
 -- ============================================================================
 CREATE DATABASE IF NOT EXISTS two_a;
 USE two_a;
@@ -40,28 +44,9 @@ CREATE TABLE `child` (
 ) ENGINE=InnoDB;
 
 -- ============================================================================
--- Schema three_a: Child table 2
--- ============================================================================
-CREATE DATABASE IF NOT EXISTS three_a;
-USE three_a;
-
-DROP TABLE IF EXISTS `child`;
-
-CREATE TABLE `child` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    parent_id INT NOT NULL,
-    data VARCHAR(100),
-    CONSTRAINT fk_three_a_child_parent
-        FOREIGN KEY (parent_id)
-        REFERENCES one_a.parent(id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE
-) ENGINE=InnoDB;
-
--- ============================================================================
 -- Verification
 -- ============================================================================
-SELECT '=== Schema Structure ===' AS '';
+SELECT '=== Schema Structure (WITHOUT three_a) ===' AS '';
 SELECT
     'one_a.parent' AS 'Table',
     'id (PK, AUTO_INCREMENT)' AS 'Primary Key',
@@ -72,13 +57,6 @@ SELECT
     'two_a.child',
     'id (PK, AUTO_INCREMENT)',
     'parent_id INT, data VARCHAR(100)',
-    'FK: parent_id → one_a.parent(id) RESTRICT'
-UNION ALL
-SELECT
-    'three_a.child',
-    'id (PK, AUTO_INCREMENT)',
-    'parent_id INT, data VARCHAR(100)',
     'FK: parent_id → one_a.parent(id) RESTRICT';
 
-SELECT 'Schemas created: one_a, two_a, three_a' AS summary;
-
+SELECT 'Schemas created: one_a, two_a (three_a omitted)' AS summary;
