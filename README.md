@@ -1,16 +1,26 @@
 # MySQL 8.0.34 Permission Issues - Minimal Working Examples
 
-This repository contains minimal, reproducible test cases for two independent MySQL permission issues discovered during DataJoint/Spyglass development.
+This repository contains minimal, reproducible test cases for two independent
+MySQL permission issues discovered during DataJoint/Spyglass development.
 
----
+## Prerequisites
+
+- Docker installed and running
+- MySQL 8.0.34 image (custom or official)
+- Bash shell
 
 ## Issue A: FK Error Verbosity (Non-Verbose ERROR 1217)
 
-**Severity:** High - Makes debugging FK constraint failures extremely difficult
+**Severity:** High - Custom single-user tables attaching to shared parents
+**Resolution:** None - MySQL 8.0 design limitation
 
 ### Problem
 
-When a user lacks ALL privileges on ANY foreign key-referencing table, MySQL returns non-verbose ERROR 1217 instead of verbose ERROR 1451, even when the specific blocking FK is in a table where the user HAS full privileges.
+When a user lacks ALL privileges on ANY foreign key-referencing table, MySQL
+returns non-verbose ERROR 1217 instead of verbose ERROR 1451, even when the
+specific blocking FK is in a table where the user HAS full privileges. This is
+an intentional MySQL design choice to prevent information leakage about
+schemas the user cannot access.
 
 ### Reproduction
 
@@ -23,7 +33,10 @@ When a user lacks ALL privileges on ANY foreign key-referencing table, MySQL ret
 
 ### Root Cause
 
-MySQL checks privileges on ALL tables with FK constraints pointing to the parent, not just the table with blocking rows. The mere existence of an FK constraint in a table where the user lacks ALL privileges causes non-verbose errors.
+MySQL checks privileges on ALL tables with FK constraints pointing to the
+parent, not just the table with blocking rows. The mere existence of an FK
+constraint in a table where the user lacks ALL privileges causes non-verbose
+errors.
 
 ### Example
 
@@ -38,17 +51,31 @@ DELETE FROM one_a.parent WHERE id = 1;
 → ERROR 1217 (non-verbose) ❌
 ```
 
-The blocking FK is in `two_a` where the user has privileges, but the user lacks privileges on `three_a`, causing the non-verbose error.
+The blocking FK is in `two_a` where the user has privileges, but the user lacks
+privileges on `three_a`, causing the non-verbose error.
 
-### Fix
+### Fixes/Workarounds
 
-Grant ALL privileges on ALL schemas with FK constraints referencing tables the user needs to modify:
+#### Direct Fix: Overgrant Privileges
+
+Grant ALL privileges on ALL schemas with FK constraints referencing tables the
+user needs to modify:
 
 ```sql
 GRANT ALL PRIVILEGES ON `one\_%`.* TO 'user'@'%';
 GRANT ALL PRIVILEGES ON `two\_%`.* TO 'user'@'%';
 GRANT ALL PRIVILEGES ON `three\_%`.* TO 'user'@'%';  -- Required!
 ```
+
+The current [error message](https://github.com/datajoint/datajoint-python/blob/63ebc380ecdd1ba1b0cff02f9927fe2666a59e24/datajoint/table.py#L525-L528)
+suggests insufficient `REFERENCES` privilege, but the actual requirement is
+`ALL PRIVILEGES` on the FK-referencing table.
+
+#### Alternative: DataJoint Documentation
+
+DataJoint should make it clear to users that custom tables will impact
+delete operations on shared parent tables, and that users must have ALL
+privileges on all FK-referencing tables.
 
 ---
 
@@ -59,6 +86,7 @@ GRANT ALL PRIVILEGES ON `three\_%`.* TO 'user'@'%';  -- Required!
 ### Problem
 
 When a user is assigned a role, database-level privileges (INSERT/UPDATE/DELETE) fail with ERROR 1142 (permission denied), even though SHOW GRANTS displays the correct privileges. This affects:
+
 - Role-based grants (wildcard and explicit database names)
 - Direct grants when a role is also assigned
 
@@ -74,6 +102,7 @@ When a user is assigned a role, database-level privileges (INSERT/UPDATE/DELETE)
 ### Root Cause
 
 MySQL 8.0.34 bug - role assignment breaks database-level privilege evaluation for DML operations. The bug occurs regardless of:
+
 - Whether privileges come from the role or direct grants
 - Whether using wildcard patterns (`one\_%`) or explicit names (`one_a`)
 - Whether role is default or explicitly activated
@@ -110,96 +139,3 @@ INSERT INTO one_a.parent (data) VALUES ('test');
 -- USE DIRECT GRANTS
 GRANT ALL PRIVILEGES ON `schema\_%`.* TO 'user'@'%';  ✅
 ```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Docker installed and running
-- MySQL 8.0.34 image (custom or official)
-- Bash shell
-
-### Run Both Tests
-
-```bash
-# Test FK error verbosity issue
-./main_fk.sh
-
-# Test role grant bug
-./main_roles.sh
-```
-
-### Container Management
-
-```bash
-# Initialize container (if needed)
-./container/3_init-mysql8.sh
-
-# Stop container
-./container/6_stop-mysql8.sh
-
-# Destroy container (clean slate)
-./container/8_destroy-mysql8.sh
-```
-
----
-
-## Documentation
-
-| File | Description |
-|------|-------------|
-| `README.md` | This file - overview and quick start |
-| `.claude/ISSUES_SUMMARY.md` | Detailed technical analysis of both issues |
-| `.claude/REPRODUCTION.md` | Step-by-step manual reproduction |
-| `.claude/RECOMMENDED_PATTERNS.md` | Recommended SQL grant patterns |
-| `.claude/PHASE3_FINDINGS.md` | Parallel testing results |
-
----
-
-## Test Environment
-
-- **MySQL Version:** 8.0.34 on Ubuntu 20.04
-- **Container:** mysql-test-perms (port 3306)
-- **Image:** Custom mysql8:u20 (or any MySQL 8.0.34)
-- **Root Password:** tutorial
-
----
-
-## Key Findings
-
-### Issue A Impact
-
-- **Affects:** DataJoint/Spyglass users with partial schema access
-- **Workaround:** Grant ALL on all FK-referencing schemas
-- **Alternative:** Provide tooling to query `information_schema.KEY_COLUMN_USAGE`
-
-### Issue B Impact
-
-- **Affects:** ALL users assigned roles in MySQL 8.0.34
-- **Workaround:** None - must avoid roles entirely
-- **Status:** Appears to be MySQL bug, not configuration issue
-
----
-
-## Contributing
-
-This is a demonstration/bug report repository. For production use:
-
-1. Use direct grants (no roles)
-2. Grant ALL on all FK-referencing schemas
-3. Test on MySQL 8.0.40+ to see if issues are resolved
-
----
-
-## License
-
-Demonstration code for bug reproduction. Use freely for testing and bug reporting.
-
----
-
-## Contact
-
-Issues discovered during DataJoint/Spyglass development.
-See `.claude/ISSUES_SUMMARY.md` for complete technical details.

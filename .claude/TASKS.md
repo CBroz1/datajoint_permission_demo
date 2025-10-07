@@ -152,8 +152,9 @@
 - Clean README.md with issue descriptions and quick start
 - Step-by-step REPRODUCTION.md
 - SQL pattern recommendations in RECOMMENDED_PATTERNS.md
-- 4 one-command reproducers (main_*.sh scripts)
-- 14 SQL files (8 MWE + 6 reference)
+- WORKAROUND.md with FK privilege discovery and automation tools
+- 2 one-command reproducers (main_fk.sh, main_roles.sh)
+- 14 SQL files (8 MWE with numbered ordering: fk_0-3, roles_0-3; 6 reference)
 - VERSION_TESTING.md documenting tests across MySQL versions (5.7.33, 8.0.21, 8.0.34)
 
 ## Phase 5: Cleanup & Validation ⏭️

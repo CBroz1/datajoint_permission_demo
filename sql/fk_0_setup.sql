@@ -17,7 +17,7 @@ GRANT REFERENCES ON `%`.* TO 'user1'@'%';
 GRANT ALL PRIVILEGES ON `one\_%`.* TO 'user1'@'%';
 GRANT ALL PRIVILEGES ON `two\_%`.* TO 'user1'@'%';
 -- CRITICAL: Intentionally omit ALL on three_%
--- User has only SELECT, REFERENCES, USAGE on three_%
+GRANT SELECT, REFERENCES, USAGE ON `three\_%`.* TO 'user1'@'%';
 
 FLUSH PRIVILEGES;
 SELECT 'Users created: admin, user1 (direct grants)' AS status;
