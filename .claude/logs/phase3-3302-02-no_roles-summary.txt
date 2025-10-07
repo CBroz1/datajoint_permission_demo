@@ -1,0 +1,8 @@
+Test: 02-no_roles (Port 3302)
+Setup: 0_setup_no_roles.sql
+Schema: 2_declare.sql
+
+User1 Parent2: ERROR 1217 (23000) at line 12: Cannot delete or update a parent row: a foreign key constraint fails
+User2 Parent2: ERROR 1217 (23000) at line 12: Cannot delete or update a parent row: a foreign key constraint fails
+User1 Parent3: ERROR 1217 (23000) at line 14: Cannot delete or update a parent row: a foreign key constraint fails
+User2 Parent3: ERROR 1217 (23000) at line 14: Cannot delete or update a parent row: a foreign key constraint fails

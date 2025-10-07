@@ -1,61 +1,205 @@
-# MySQL Permission Error Demo
+# MySQL 8.0.34 Permission Issues - Minimal Working Examples
 
-## Database Configuration
+This repository contains minimal, reproducible test cases for two independent MySQL permission issues discovered during DataJoint/Spyglass development.
 
-Scripts provided by Dirk Kleinhesselink to demonstrate the Frank Lab's MySQL
-configuration.  The scripts are designed to be run on a Linux system with
-Docker installed.
+---
 
-1. Local settings files
-    - `mysql.env` - Copy `example.mysql.env` to `mysql.env` and fill in values
-    - `my.cnf` - Copy `example.my.cnf` to `my.cnf` and modify
-        the values to remove the need for credentials in the command line.
-        For a production system, leave this file blank.
-2. Custom image: download and build
-    - `container/1_load-image.sh` - Download and load the mysql-8.0.34 image
-        into the local docker repository.
-    - `container/2_build-mysql8.sh`[^1] - Build the custom MySQL container image
-        from the Dockerfile.base and the mysql-8.0.34 image.
-3. `container/3_init-mysql8.sh` - Initialize the MySQL container
-    - Loads `mysql.env`
-    - Makes folders for various paths (see `mysql.env`)
-    - Starts the MySQL container
-    - Maps scripts/configs into the container (see `container/bin` and
-        `container/conf`)
-    - Generates security certificates via openssl
-4. `container/4_start-mysql8.sh` - Start the MySQL container
-5. `container/5_shell.sh` - Open a shell in the MySQL container
-6. `container/6_stop-mysql8.sh` - Stop the MySQL container
-7. `container/7_relaunch-mysql8.sh` - Relaunch the MySQL container.  This is
-    used to reinitialize the container after it has been stopped.
-8. `container/8_destroy-mysql8.sh` - Destroy the MySQL container. Removes the
-    container and the data volume.
+## Issue A: FK Error Verbosity (Non-Verbose ERROR 1217)
 
-[^1] Only use the build script if you do not have the container image already
-or if you want to make a newer/updated image.  Note that the Dockerfile.base
-has hard-coded references to now out-dated community mysql 8 repositories. To
-build a newer container, you will need to know what repository file is available
-and update the Dockerfile.base file first.  docker build is being deprecated.
+**Severity:** High - Makes debugging FK constraint failures extremely difficult
 
-The /var/lib/mysql folder will be mapped back to a folder outside the container
-as will the mysql-backup folder.
+### Problem
 
-## 3/26/25 Steps
+When a user lacks ALL privileges on ANY foreign key-referencing table, MySQL returns non-verbose ERROR 1217 instead of verbose ERROR 1451, even when the specific blocking FK is in a table where the user HAS full privileges.
 
-- select single Nwbfile entries in all common tables listed in issue
-- run export of these entries
-- modify export varchars
-  - initially run modified
-  - issues importing from common with mismatching table definitions
-- ensure log tables exist (from spy.X import schema; schema.log)
-  - initially ran w/o and cascading delete attempted to declare it
-  - declaring a table within a transaction raises an error
-- as admin, import decoding tables not previously declared
-  - basic user did not have permission to declare w/in dj_helper_fn:77
-- as basic1, insert minirec file with insert_sessions
-- as basic2, attempt to delete ...
-  - session from export: No issue
-  - minirec session above: REPLICATED
+### Reproduction
 
-- declare tables with spyglass as admin
-- insert minirec file with insert_sessions as basic1
+```bash
+./main_fk.sh
+```
+
+**Expected:** ERROR 1451 with full FK constraint details
+**Actual:** ERROR 1217 with no debugging information
+
+### Root Cause
+
+MySQL checks privileges on ALL tables with FK constraints pointing to the parent, not just the table with blocking rows. The mere existence of an FK constraint in a table where the user lacks ALL privileges causes non-verbose errors.
+
+### Example
+
+```
+Schema:
+  one_a.parent (id PK)
+      ↑
+      ├── two_a.child (FK, has blocking row)     user HAS ALL privileges
+      └── three_a.child (FK, no blocking rows)   user LACKS ALL privileges
+
+DELETE FROM one_a.parent WHERE id = 1;
+→ ERROR 1217 (non-verbose) ❌
+```
+
+The blocking FK is in `two_a` where the user has privileges, but the user lacks privileges on `three_a`, causing the non-verbose error.
+
+### Fix
+
+Grant ALL privileges on ALL schemas with FK constraints referencing tables the user needs to modify:
+
+```sql
+GRANT ALL PRIVILEGES ON `one\_%`.* TO 'user'@'%';
+GRANT ALL PRIVILEGES ON `two\_%`.* TO 'user'@'%';
+GRANT ALL PRIVILEGES ON `three\_%`.* TO 'user'@'%';  -- Required!
+```
+
+---
+
+## Issue B: Role Grant Bug (ERROR 1142 Permission Denied)
+
+**Severity:** Critical - Completely breaks role-based access control (RBAC)
+
+### Problem
+
+When a user is assigned a role, database-level privileges (INSERT/UPDATE/DELETE) fail with ERROR 1142 (permission denied), even though SHOW GRANTS displays the correct privileges. This affects:
+- Role-based grants (wildcard and explicit database names)
+- Direct grants when a role is also assigned
+
+### Reproduction
+
+```bash
+./main_roles.sh
+```
+
+**Expected:** INSERT/UPDATE/DELETE work (user has ALL privileges)
+**Actual:** ERROR 1142 (INSERT command denied)
+
+### Root Cause
+
+MySQL 8.0.34 bug - role assignment breaks database-level privilege evaluation for DML operations. The bug occurs regardless of:
+- Whether privileges come from the role or direct grants
+- Whether using wildcard patterns (`one\_%`) or explicit names (`one_a`)
+- Whether role is default or explicitly activated
+
+### Example
+
+```sql
+-- Setup with role
+CREATE ROLE 'dj_user';
+GRANT ALL PRIVILEGES ON `one_a`.* TO 'dj_user';
+GRANT 'dj_user' TO 'user1'@'%';
+
+-- Attempt INSERT
+INSERT INTO one_a.parent (data) VALUES ('test');
+→ ERROR 1142: INSERT command denied ❌
+
+-- Remove role, add direct grant
+REVOKE 'dj_user' FROM 'user1'@'%';
+GRANT ALL PRIVILEGES ON `one_a`.* TO 'user1'@'%';
+
+-- Retry INSERT
+INSERT INTO one_a.parent (data) VALUES ('test');
+→ Success ✅
+```
+
+### ONLY Solution
+
+**Avoid MySQL roles entirely in 8.0.34.** Use direct grants only:
+
+```sql
+-- DO NOT USE ROLES
+-- CREATE ROLE 'dj_user';  ❌
+
+-- USE DIRECT GRANTS
+GRANT ALL PRIVILEGES ON `schema\_%`.* TO 'user'@'%';  ✅
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Docker installed and running
+- MySQL 8.0.34 image (custom or official)
+- Bash shell
+
+### Run Both Tests
+
+```bash
+# Test FK error verbosity issue
+./main_fk.sh
+
+# Test role grant bug
+./main_roles.sh
+```
+
+### Container Management
+
+```bash
+# Initialize container (if needed)
+./container/3_init-mysql8.sh
+
+# Stop container
+./container/6_stop-mysql8.sh
+
+# Destroy container (clean slate)
+./container/8_destroy-mysql8.sh
+```
+
+---
+
+## Documentation
+
+| File | Description |
+|------|-------------|
+| `README.md` | This file - overview and quick start |
+| `.claude/ISSUES_SUMMARY.md` | Detailed technical analysis of both issues |
+| `.claude/REPRODUCTION.md` | Step-by-step manual reproduction |
+| `.claude/RECOMMENDED_PATTERNS.md` | Recommended SQL grant patterns |
+| `.claude/PHASE3_FINDINGS.md` | Parallel testing results |
+
+---
+
+## Test Environment
+
+- **MySQL Version:** 8.0.34 on Ubuntu 20.04
+- **Container:** mysql-test-perms (port 3306)
+- **Image:** Custom mysql8:u20 (or any MySQL 8.0.34)
+- **Root Password:** tutorial
+
+---
+
+## Key Findings
+
+### Issue A Impact
+
+- **Affects:** DataJoint/Spyglass users with partial schema access
+- **Workaround:** Grant ALL on all FK-referencing schemas
+- **Alternative:** Provide tooling to query `information_schema.KEY_COLUMN_USAGE`
+
+### Issue B Impact
+
+- **Affects:** ALL users assigned roles in MySQL 8.0.34
+- **Workaround:** None - must avoid roles entirely
+- **Status:** Appears to be MySQL bug, not configuration issue
+
+---
+
+## Contributing
+
+This is a demonstration/bug report repository. For production use:
+
+1. Use direct grants (no roles)
+2. Grant ALL on all FK-referencing schemas
+3. Test on MySQL 8.0.40+ to see if issues are resolved
+
+---
+
+## License
+
+Demonstration code for bug reproduction. Use freely for testing and bug reporting.
+
+---
+
+## Contact
+
+Issues discovered during DataJoint/Spyglass development.
+See `.claude/ISSUES_SUMMARY.md` for complete technical details.
