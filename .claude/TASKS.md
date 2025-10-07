@@ -119,45 +119,67 @@
 - [x] Identified root cause: Number of FK-referencing tables affects error verbosity
 - [x] Identified secondary issue: Role-based grants fail DELETE privilege
 
-## Phase 4: Document Findings 🔄
+## Phase 4: Document Findings ✅
 
 **Goal:** Create clear reproduction steps and propose fix
 
-### 4.1 Update Documentation
+### 4.1 Update Documentation and cleanup ✅
 
-- [ ] Update CLAUDE.md with isolation results
-- [ ] Create .claude/REPRODUCTION.md with step-by-step instructions
+- [x] Move all non-essential documentation to .claude/
+- [x] Remove all unnecessary files, leaving only those needed for reproduction (13 files removed)
+- [x] Created mwe_*.sql files for clean MWE (8 new files)
+- [x] Update CLAUDE.md with isolation results
+- [x] Create .claude/REPRODUCTION.md with step-by-step instructions
 
-### 4.2 Propose Fix
+### 4.2 Propose Fix ✅
 
-- [ ] Document recommended user/role creation SQL
-- [ ] Document recommended grant patterns
+- [x] Document recommended user/role creation SQL
+- [x] Document recommended grant patterns in RECOMMENDED_PATTERNS.md
+- [x] Suggest means of granting minimal required privileges for children of shared parents
 
-### 4.3 Create Clean MWE
+### 4.3 Create Clean MWE ✅
 
-- [ ] Create a main_X.sh for each documented issue that can be run directly with one command, showing error messages
-  - [ ] main_fk.sh - reproduces FK error verbosity issue
-  - [ ] main_roles.sh - reproduces role-based grant issue
-- [ ] Remove all unnecessary SQL files, leaving only those needed for main_x.sh
-- [ ] Edit readme to reflect minimal description of each issue
-- [ ] Test each main_x.sh in a fresh container to ensure reproducibility
+- [x] Create a main_X.sh for each documented issue that can be run directly with one command, showing error messages
+  - [x] main_fk.sh - reproduces FK error verbosity issue (custom mysql8:u20)
+  - [x] main_roles.sh - reproduces role-based grant issue (custom mysql8:u20)
+  - [x] main_fk_datajoint.sh - FK issue with datajoint/mysql:8.0
+  - [x] main_roles_datajoint.sh - role issue with datajoint/mysql:8.0
+- [x] Remove all unnecessary SQL files, leaving only those needed for main_x.sh
+- [x] Edit readme to reflect minimal description of each issue
+- [x] Test each main_x.sh in a fresh container to ensure reproducibility
 
-## Phase 5: Cleanup & Validation ✅
+**Deliverables:**
+- Clean README.md with issue descriptions and quick start
+- Step-by-step REPRODUCTION.md
+- SQL pattern recommendations in RECOMMENDED_PATTERNS.md
+- 4 one-command reproducers (main_*.sh scripts)
+- 14 SQL files (8 MWE + 6 reference)
+- VERSION_TESTING.md documenting tests across MySQL versions (5.7.33, 8.0.21, 8.0.34)
 
-**Goal:** Organize deliverables
+## Phase 5: Cleanup & Validation ⏭️
+
+**Goal:** Organize deliverables (optional)
 
 - [ ] Verify all findings are documented
 - [ ] Ensure .claude/logs/ contains all test results
 - [ ] Remove temporary files (temp-* prefix)
-- [ ] Final review of CLAUDE.md, ANALYSIS.md, RESULTS.md to ensure clarity and eliminate redundancy
+- [ ] Final review of CLAUDE.md to ensure clarity and eliminate redundancy
 
 ---
 
 ## Current Status
 
-**Phase:** 3 - Systematic Isolation ✅ Complete
-**Next:** Phase 4 - Document Findings (optional cleanup)
+**Phase:** 4 - Document Findings ✅ Complete
+**Next:** Phase 5 - Cleanup & Validation (optional)
 **Blockers:** None
+
+**Completion Summary:**
+- ✅ Both MySQL issues fully reproduced and documented
+- ✅ Created 4 one-command reproducers (2 for custom mysql8, 2 for datajoint/mysql:8.0)
+- ✅ Tested across 3 MySQL versions (5.7.33, 8.0.21, 8.0.34)
+- ✅ Clean README.md with issue descriptions
+- ✅ Complete technical documentation in .claude/ directory
+- ✅ SQL files organized (8 MWE + 6 reference)
 
 ## Phase 3 Summary
 

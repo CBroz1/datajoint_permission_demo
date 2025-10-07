@@ -1,14 +1,17 @@
 #!/bin/bash
 # Minimal Working Example: FK Error Verbosity Issue
 # Reproduces non-verbose ERROR 1217 when user lacks ALL on FK-referencing table
+# Uses datajoint/mysql:latest image
 
 set -e
 
 CNAME="mysql-fk-test"
 ROOT_PW="tutorial"
+PORT=3320
 
 echo "========================================"
 echo "FK Error Verbosity Issue - MWE"
+echo "Using datajoint/mysql:8.0"
 echo "========================================"
 echo ""
 
@@ -16,35 +19,11 @@ echo ""
 if ! docker ps -a --format '{{.Names}}' | grep -q "^${CNAME}$"; then
     echo "Initializing MySQL container ${CNAME}..."
 
-    # Create temporary env file for this container
-    cat > /tmp/${CNAME}.env <<EOF
-ROOT_PATH="/home/cb/wrk/datajoint_permission_demo"
-SRC=ubuntu
-VER=20.04
-DOCKERFILE=Dockerfile.base
-IMAGE=mysql8
-TAG=u20
-CNAME=${CNAME}
-MACADDR=4e:b0:3d:42:e0:70
-DNS1=8.8.8.8
-DNS2=8.8.4.4
-RPORT=3320
-WRITE_DIR="\${ROOT_PATH}/data/\${CNAME}"
-DB_PATH="\${WRITE_DIR}/db"
-DB_DATA="\${WRITE_DIR}/mysql"
-DB_LOGS="\${WRITE_DIR}/mysql-logs"
-DB_BACKUP="\${WRITE_DIR}/mysql-backups"
-KEYS_PATH="\${WRITE_DIR}/mysql-keys"
-BACK_USER=mysql-backup
-BACK_PW=backup123
-BACK_DBNAME=testdb
-ROOT_PW=tutorial
-TZ=America/Los_Angeles
-EOF
-
-    cp /tmp/${CNAME}.env mysql.env
-    ./container/3_init-mysql8.sh
-    rm /tmp/${CNAME}.env
+    docker run -d \
+        --name "$CNAME" \
+        -p ${PORT}:3306 \
+        -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
+        datajoint/mysql:8.0
 
     echo "Waiting for MySQL to start..."
     for i in {1..30}; do
@@ -75,19 +54,19 @@ docker exec "$CNAME" mysql -uroot -p${ROOT_PW} \
 
 # Setup users
 echo "Creating users..."
-docker exec -i "$CNAME" mysql -uroot -p${ROOT_PW} < sql/mwe_fk_setup.sql | grep -v "Warning"
+docker exec -i "$CNAME" mysql -uroot -p${ROOT_PW} < sql/fk_0_setup.sql | grep -v "Warning"
 
 echo ""
 
 # Create schema
 echo "Creating schema..."
-docker exec -i "$CNAME" mysql -uadmin -p${ROOT_PW} < sql/mwe_fk_schema.sql | grep -v "Warning"
+docker exec -i "$CNAME" mysql -uadmin -p${ROOT_PW} < sql/fk_1_schema.sql | grep -v "Warning"
 
 echo ""
 
 # Insert test data
 echo "Inserting test data..."
-docker exec -i "$CNAME" mysql -uadmin -p${ROOT_PW} < sql/mwe_fk_insert.sql | grep -v "Warning"
+docker exec -i "$CNAME" mysql -uadmin -p${ROOT_PW} < sql/fk_2_insert.sql | grep -v "Warning"
 
 echo ""
 echo "========================================"
@@ -104,7 +83,7 @@ echo "Command: DELETE FROM one_a.parent WHERE id = 1;"
 echo ""
 
 # Attempt delete (will fail with ERROR 1217)
-docker exec -i "$CNAME" mysql -uuser1 -p${ROOT_PW} < sql/mwe_fk_delete.sql 2>&1 | grep "ERROR"
+docker exec -i "$CNAME" mysql -uuser1 -p${ROOT_PW} < sql/fk_3_delete.sql 2>&1 | grep "ERROR"
 
 echo ""
 echo "========================================"
@@ -128,6 +107,6 @@ echo ""
 echo "Fix: Grant ALL privileges on ALL FK-referencing schemas:"
 echo "  GRANT ALL PRIVILEGES ON \`three\\_%\`.* TO 'user1'@'%';"
 echo ""
-echo "Container: ${CNAME} (port 3320)"
+echo "Container: ${CNAME} (port ${PORT})"
 echo "To destroy: docker stop ${CNAME} && docker rm ${CNAME}"
 echo ""

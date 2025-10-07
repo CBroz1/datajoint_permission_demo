@@ -4,7 +4,6 @@ container/mysql-*
 container/Dockerfile.build
 sql/_Populate*sql
 data
-my.cnf
 mysql-8*
 mysql.env
 mysql_keys/
