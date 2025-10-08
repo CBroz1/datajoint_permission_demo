@@ -1,8 +1,0 @@
-Test: 01-baseline (Port 3301)
-Setup: 0_setup_roles.sql
-Schema: 2_declare.sql
-
-User1 Parent2: ERROR 1217 (23000) at line 12: Cannot delete or update a parent row: a foreign key constraint fails
-User2 Parent2: ERROR 1142 (42000) at line 12: DELETE command denied to user 'user2'@'localhost' for table 'parent'
-User1 Parent3: ERROR 1217 (23000) at line 14: Cannot delete or update a parent row: a foreign key constraint fails
-User2 Parent3: ERROR 1142 (42000) at line 14: DELETE command denied to user 'user2'@'localhost' for table 'parent'

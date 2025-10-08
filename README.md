@@ -6,7 +6,7 @@ MySQL permission issues discovered during DataJoint/Spyglass development.
 ## Prerequisites
 
 - Docker installed and running
-- MySQL 8.0.34 image (custom or official)
+- MySQL image (or datajoint/mysql:8)
 - Bash shell
 
 ## Issue A: FK Error Verbosity (Non-Verbose ERROR 1217)
@@ -85,7 +85,9 @@ privileges on all FK-referencing tables.
 
 ### Problem
 
-When a user is assigned a role, database-level privileges (INSERT/UPDATE/DELETE) fail with ERROR 1142 (permission denied), even though SHOW GRANTS displays the correct privileges. This affects:
+When a user is assigned a role, database-level privileges
+(INSERT/UPDATE/DELETE) fail with ERROR 1142 (permission denied), even though
+SHOW GRANTS displays the correct privileges. This affects:
 
 - Role-based grants (wildcard and explicit database names)
 - Direct grants when a role is also assigned
@@ -101,7 +103,8 @@ When a user is assigned a role, database-level privileges (INSERT/UPDATE/DELETE)
 
 ### Root Cause
 
-MySQL 8.0.34 bug - role assignment breaks database-level privilege evaluation for DML operations. The bug occurs regardless of:
+MySQL 8.0.34 bug - role assignment breaks database-level privilege evaluation
+for DML operations. The bug occurs regardless of:
 
 - Whether privileges come from the role or direct grants
 - Whether using wildcard patterns (`one\_%`) or explicit names (`one_a`)

@@ -1,8 +1,0 @@
-Test: 08-one_child (Port 3308)
-Setup: 0_setup_roles.sql
-Schema: 2_declare_one_child.sql
-
-User1 Parent2: ERROR 1451 (23000) at line 12: Cannot delete or update a parent row: a foreign key constraint fails (`two_a`.`child`, CONSTRAINT `fk_two_a_child_parent` FOREIGN KEY (`parent_id`) REFERENCES `one_a`.`parent` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE)
-User2 Parent2: ERROR 1142 (42000) at line 12: DELETE command denied to user 'user2'@'localhost' for table 'parent'
-User1 Parent3: 
-User2 Parent3: ERROR 1142 (42000) at line 14: DELETE command denied to user 'user2'@'localhost' for table 'parent'

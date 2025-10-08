@@ -1,8 +1,0 @@
-Test: 03-both_roles (Port 3303)
-Setup: 0_setup_both_roles.sql
-Schema: 2_declare.sql
-
-User1 Parent2: ERROR 1142 (42000) at line 12: DELETE command denied to user 'user1'@'localhost' for table 'parent'
-User2 Parent2: ERROR 1142 (42000) at line 12: DELETE command denied to user 'user2'@'localhost' for table 'parent'
-User1 Parent3: ERROR 1142 (42000) at line 14: DELETE command denied to user 'user1'@'localhost' for table 'parent'
-User2 Parent3: ERROR 1142 (42000) at line 14: DELETE command denied to user 'user2'@'localhost' for table 'parent'
